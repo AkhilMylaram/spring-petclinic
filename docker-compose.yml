@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  mysql:
+    build:
+      context: ./db               # Path to the db folder with the MySQL Dockerfile
+      dockerfile: Dockerfile        # Dockerfile inside the db folder
+    container_name: petclinic-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: petclinic
+      MYSQL_USER: petclinic
+      MYSQL_PASSWORD: petclinic
+    ports:
+      - "3306:3306"                 # Expose MySQL port
+    networks:
+      - petclinic-network
+
+  petclinic:
+    build:
+      context: .               # Path to the app folder with the Spring PetClinic Dockerfile
+    container_name: petclinic-app
+    environment:
+      MYSQL_URL: jdbc:mysql://mysql:3306/petclinic  # Connect to the MySQL container
+      MYSQL_USER: petclinic
+      MYSQL_PASS: petclinic
+    ports:
+      - "8080:8080"                 # Expose PetClinic app on port 8080
+    depends_on:
+      - mysql                       # Ensure MySQL starts first
+    networks:
+      - petclinic-network
+
+networks:
+  petclinic-network:
+    driver: bridge
+
