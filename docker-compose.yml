@@ -1,33 +1,31 @@
 version: '3.8'
 
 services:
-  mysql:
-    build:
-      context: ./db               # Path to the db folder with the MySQL Dockerfile
-      dockerfile: Dockerfile        # Dockerfile inside the db folder
-    container_name: petclinic-mysql
+  postgres:
+    image: postgres:latest   # Use the official PostgreSQL image
+    container_name: petclinic-postgres
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: petclinic
-      MYSQL_USER: petclinic
-      MYSQL_PASSWORD: petclinic
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: pass
+      POSTGRES_DB: petclinic
     ports:
-      - "3306:3306"                 # Expose MySQL port
+      - "5432:5432"          # Expose PostgreSQL port
     networks:
       - petclinic-network
 
   petclinic:
     build:
-      context: .               # Path to the app folder with the Spring PetClinic Dockerfile
+      context: .             # Path to the app folder with the Spring PetClinic Dockerfile
     container_name: petclinic-app
     environment:
-      MYSQL_URL: jdbc:mysql://mysql:3306/petclinic  # Connect to the MySQL container
-      MYSQL_USER: petclinic
-      MYSQL_PASS: petclinic
+      SPRING_DATASOURCE_URL: jdbc:postgresql://petclinic-postgres:5432/petclinic  # PostgreSQL URL
+      SPRING_DATASOURCE_USERNAME: user      # PostgreSQL username
+      SPRING_DATASOURCE_PASSWORD: pass      # PostgreSQL password
+      SPRING_PROFILES_ACTIVE: postgres      # Use PostgreSQL profile in Spring Boot
     ports:
-      - "8080:8080"                 # Expose PetClinic app on port 8080
+      - "8080:8080"           # Expose PetClinic app on port 8080
     depends_on:
-      - mysql                       # Ensure MySQL starts first
+      - postgres              # Ensure PostgreSQL starts first
     networks:
       - petclinic-network
 
