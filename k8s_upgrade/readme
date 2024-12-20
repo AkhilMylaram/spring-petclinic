@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: spring-petclinic-pv
+spec:
+  accessModes:
+    - ReadWriteMany
+  capacity:
+    storage: 2Gi
+  storageClassName: normal
+  hostPath:
+    path: /tmp
+
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: spring-petclinic-pvc
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 2Gi
+  storageClassName: normal
+  
+  
+---
+
+
+volumeMounts:
+  - name: spring-petclinic-vol
+    mountPath: /var/lib/postgresql/data
+volumes:
+  - name: spring-petclinic-vol
+    persistentVolumeClaim:
+      claimName: spring-petclinic-pvc
