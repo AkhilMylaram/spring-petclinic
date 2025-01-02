@@ -1,0 +1,39 @@
+version: '3'
+services:
+  frontend:
+    build:
+      context: ./client  # path to the frontend directory
+    ports:
+      - "3000:3000"
+    container_name: frontend
+    depends_on:
+      - backend
+
+  backend:
+    build:
+      context: ./  # path to the backend directory
+    ports:
+      - "5000:5000"
+    container_name: backend
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      - redis
+
+  redis:
+    image: "redis:latest"
+    container_name: redis
+    ports:
+      - "6379:6379"
+
+  nginx:
+    build:
+      context: ./nginx  # Path to the directory containing the Dockerfile and nginx.conf
+    ports:
+      - "80:80"
+    container_name: nginx
+    depends_on:
+      - frontend
+      - backend
+

@@ -1,0 +1,365 @@
+redis
+------------
+docker run -d -p 6379:6379  --name redis --network chat-network redis:latest
+
+Enter the app container:
+docker exec -it chat-app /bin/bash
+apt update
+apt install redis-tools 
+
+Test Redis connection using redis-cli:
+redis-cli -h redis-container -p 6379
+
+Then, run:
+PING
+You should see PONG if the connection is successful.
+
+or----
+
+Access Redis CLI:
+
+docker exec -it redis-container redis-cli
+
+Look for keys:
+KEYS *
+
+Fetch data for a specific key:
+GET <key>
+
+++++++++++++++++++++
+Building the Project
+====================================================================================================
+-----------------------------------------------------------------------------------------------------
+
+1. in Chat--> config.py 
+   change the host 12.90.292.2 ip address to the redis 
+   make the redis as the container name that need to connect
+   
+    redis_endpoint_url = os.environ.get("REDIS_ENDPOINT_URL", "redis:6379")
+	
+	redis connection end point url 
+	check with the redis_client also
+	
+   
+2.To make the app accessible on all interfaces in your current code, replace:
+
+python
+Copy code
+socketio.run(app, port=port, debug=True, use_reloader=True)
+with:
+
+python
+Copy code
+socketio.run(app, host="0.0.0.0", port=port, debug=True, use_reloader=True)
+This change will allow the app to be accessed externally (not just localhost).
+
+
+3. cd client
+   ls
+   vi package.json
+
+  
+"proxy": "http://backend:5000"
+
+backend is the container name
+as we can access the backedn with instanceip:5000
+
+hence you can provide that url also
+
+
+frontend (port 3000)--> backend (port 5000)--> redis (port 6379)
+
+redis configuration is at
+cd chat --> config.py --> give the host name redis that is container name
+
+frontend with backend connectivity is at
+cd client --> package.json --> set the proxy connected to backend 
+
+backend
+requirements.txt
+python.py
+
+
+
++++++++++++++++++++++++++++++++++++++=
+To dockerize and run the Basic Redis Chat App Demo using Docker containers, here are the key steps to follow:
+
+1. Dockerize the Flask Backend
+You need to create a Dockerfile for the Flask backend application.
+
+Example Dockerfile for Flask backend:
+
+Dockerfile
+Copy code
+# Use the official Python image
+FROM python:3.9-slim
+
+# Set the working directory
+WORKDIR /app
+
+# Copy the requirements file
+COPY requirements.txt .
+
+# Install dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the application files
+COPY . .
+
+# Expose the port the app runs on
+EXPOSE 5000
+
+# Run the application
+CMD ["python", "app.py"]
+Make sure you have a requirements.txt file in your project directory containing all the dependencies, including Flask, Redis, and Flask-SocketIO.
+
+
+
+
+2. Dockerize the Frontend (React App)
+----------------------------------------
+For the frontend, you will need a separate Dockerfile.
+
+Example Dockerfile for React frontend:
+
+Dockerfile
+Copy code
+# Use the official Node.js image
+FROM node:16
+
+# Set the working directory
+WORKDIR /app
+
+# Copy package.json and install dependencies
+COPY package.json .
+RUN npm install
+
+# Copy the application files
+COPY . .
+
+# Expose the port the frontend runs on
+EXPOSE 3000
+
+# Run the React app
+CMD ["npm", "start"]
+
+4. mkdir nginx
+   cd nginx
+   vi nginx.conf
+   
+   events {}
+
+http {
+    server {
+        listen 80;
+
+        # Proxy requests to the backend service
+        location /api/ {
+            proxy_pass http://backend:5000/;  # Use the service name "backend"
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+
+        # Serve the frontend
+        location / {
+            proxy_pass http://frontend:3000/;  # Use the service name "frontend"
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+    }
+}
+
+
+   
+   vi Dockerfile
+   
+   # Use the official NGINX image
+FROM nginx:latest
+
+# Copy the custom NGINX configuration to the container
+COPY nginx.conf /etc/nginx/nginx.conf
+
+# Expose port 80
+EXPOSE 80
+
+
+5. Create Docker Compose File
+---------------------------------------
+To manage both the backend and frontend containers together, create a docker-compose.yml file.
+
+Example docker-compose.yml:
+
+yaml
+Copy code
+version: '3'
+services:
+  frontend:
+    build:
+      context: ./client  # path to the frontend directory
+    ports:
+      - "3000:3000"
+    container_name: frontend
+    depends_on:
+      - backend
+
+  backend:
+    build:
+      context: ./  # path to the backend directory
+    ports:
+      - "5000:5000"
+    container_name: backend
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      - redis
+
+  redis:
+    image: "redis:latest"
+    container_name: redis
+    ports:
+      - "6379:6379"
+
+  nginx:
+    build:
+      context: ./nginx  # Path to the directory containing the Dockerfile and nginx.conf
+    ports:
+      - "80:80"
+    container_name: nginx
+    depends_on:
+      - frontend
+      - backend
+
+	  
+This configuration will:
+---------------------------------------------
+Build and run the Flask backend and React frontend.
+Connect both to a Redis container.
+Expose necessary ports (3000 for frontend, 5000 for backend, 6379 for Redis).
+4. Build Docker Images
+Run the following command to build the images defined in your docker-compose.yml file:
+
+sh
+Copy code
+docker-compose build
+5. Run Docker Containers
+After building the images, you can start the containers using:
+
+sh
+Copy code
+docker-compose up
+This will:
+
+Start the frontend on localhost:3000.
+Start the backend on localhost:5000.
+Start Redis on localhost:6379.
+6. Access the Application
+Open the frontend in your browser: http://localhost:3000.
+The Flask backend will be running on http://localhost:5000, but you generally won’t need to access it directly unless debugging.
+7. Verify Redis Connection
+Ensure that the Flask app is connecting to Redis properly. If Redis isn't connecting, check the logs and ensure the REDIS_HOST and REDIS_PORT environment variables are correctly set in the backend container.
+
+8. Dockerizing for Production (Optional)
+If you're deploying the application to production (e.g., on Heroku, Google Cloud), ensure you:
+
+Set appropriate environment variables (like REDIS_ENDPOINT_URI and REDIS_PASSWORD).
+Optimize Dockerfiles for production (e.g., use a multi-stage build, minify frontend assets).
+With these steps, you can easily create and run the Docker containers for the Basic Redis Chat App Demo.
+
+
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+I dont want to expose my frontend and backend port outside world i,e from browser to acceess directly
+only nginx should be routed this should route to frontend and backend
+nginx-->frontend-->backend-->redis
+
+To achieve this, you need to ensure that only the NGINX service's port 80 is exposed to the outside world, 
+while the backend and frontend services are only accessible internally within the Docker network. 
+Here's how you can update your setup:
+
+What Changed?
+Removed Ports for Frontend and Backend:
+
+The ports key was removed for the frontend and backend services, making them inaccessible from outside the Docker network.
+These services are only reachable via the internal app-network.
+Added a Custom Network:
+
+All services are connected to a custom network (app-network) to allow internal communication.
+NGINX Exposes Only Port 80:
+
+Only NGINX is exposed to the host machine, acting as the single entry point.
+
+version: '3'
+services:
+  frontend:
+    build:
+      context: ./client  # path to the frontend directory
+    container_name: frontend
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+  backend:
+    build:
+      context: ./  # path to the backend directory
+    container_name: backend
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      - redis
+    networks:
+      - app-network
+
+  redis:
+    image: "redis:latest"
+    container_name: redis
+    networks:
+      - app-network
+
+  nginx:
+    build:
+      context: ./nginx  # Path to the directory containing the Dockerfile and nginx.conf
+    ports:
+      - "80:80"  # Only expose NGINX port
+    container_name: nginx
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+here we exposed the hostport 80 to the  nginx container port 80 that is the host port connection
+rest frontend and backend are exposed in docker images
+with in that docker network they will get communicated
+
+
+As we not sepcified the ports for backend and frontend in the docker-compose file only nginx got expose to host see below
+
+CONTAINER ID   IMAGE                       COMMAND                  CREATED         STATUS         PORTS                               NAMES
+35c7db73cf1e   spring-petclinic-nginx      "/docker-entrypoint.…"   8 seconds ago   Up 6 seconds   0.0.0.0:80->80/tcp, :::80->80/tcp   nginx
+209bb0db24e0   spring-petclinic-frontend   "docker-entrypoint.s…"   8 seconds ago   Up 7 seconds   3000/tcp                            frontend
+4eb08da34ec6   spring-petclinic-backend    "python app.py"          8 seconds ago   Up 7 seconds   5000/tcp                            backend
+286d31f60151   redis:latest                "docker-entrypoint.s…"   8 seconds ago   Up 7 seconds   6379/tcp                            redis
+ubuntu@ip-172-31-35-53:~/spring-petclinic$ ss -tunlp
+Netid        State          Recv-Q         Send-Q                     Local Address:Port                 Peer Address:Port        Process
+udp          UNCONN         0              0                              127.0.0.1:323                       0.0.0.0:*
+udp          UNCONN         0              0                          127.0.0.53%lo:53                        0.0.0.0:*
+udp          UNCONN         0              0                      172.31.35.53%eth0:68                        0.0.0.0:*
+udp          UNCONN         0              0                                  [::1]:323                          [::]:*
+tcp          LISTEN         0              128                            127.0.0.1:6010                      0.0.0.0:*
+tcp          LISTEN         0              128                              0.0.0.0:22                        0.0.0.0:*
+tcp          LISTEN         0              4096                             0.0.0.0:80                        0.0.0.0:*
+tcp          LISTEN         0              4096                       127.0.0.53%lo:53                        0.0.0.0:*
+tcp          LISTEN         0              128                                [::1]:6010                         [::]:*
+tcp          LISTEN         0              128                                 [::]:22                           [::]:*
+tcp          LISTEN         0              4096                                [::]:80                           [::]:*
+

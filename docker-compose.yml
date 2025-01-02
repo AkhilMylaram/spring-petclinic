@@ -1,0 +1,45 @@
+version: '3'
+services:
+  frontend:
+    build:
+      context: ./client  # path to the frontend directory
+    container_name: frontend
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+  backend:
+    build:
+      context: ./  # path to the backend directory
+    container_name: backend
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      - redis
+    networks:
+      - app-network
+
+  redis:
+    image: "redis:latest"
+    container_name: redis
+    networks:
+      - app-network
+
+  nginx:
+    build:
+      context: ./nginx  # Path to the directory containing the Dockerfile and nginx.conf
+    ports:
+      - "80:80"  # Only expose NGINX port
+    container_name: nginx
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
