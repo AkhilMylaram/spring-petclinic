@@ -2,11 +2,15 @@ import os
 
 import redis
 from werkzeug.utils import import_string
+from dotenv import load_dotenv
+
 
 
 class Config(object):
     # Parse redis environment variables.
-    redis_endpoint_url = os.environ.get("REDIS_ENDPOINT_URL", "redis:6379")
+    load_dotenv()
+    redis_ip  = os.getenv('REDIS_ENDPOINT_ip')
+    redis_endpoint_url = os.environ.get("redis_ip", "redis:6379")
     REDIS_HOST, REDIS_PORT = tuple(redis_endpoint_url.split(":"))
     REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD", None)
     SECRET_KEY = os.environ.get("SECRET_KEY", "Optional default value")

@@ -75,6 +75,34 @@ cd chat --> config.py --> give the host name redis that is container name
 frontend with backend connectivity is at
 cd client --> package.json --> set the proxy connected to backend 
 
+4. *** important this is for variables
+chat --> config.py
+
+requirements.py
+python-dotenv
+
+create .env
+vi .env
+REDIS_ENDPOINT_ip=54.158.121.74
+
+
+access this variable in the config.py file
+
+from dotenv import load_dotenv
+
+class Config(object):
+    # Parse redis environment variables.
+    load_dotenv()
+    redis_ip  = os.getenv('REDIS_ENDPOINT_ip')
+    redis_endpoint_url = os.environ.get("redis_ip", "redis:6379")
+
+
+here redis_url is the local variable accessing the enviroment variable REDIS_ENDPOINT_URL
+
+
+we did this to give the varible in docker compose file as enviroment varible to keep dynamic
+
+
 backend
 requirements.txt
 python.py
@@ -215,6 +243,7 @@ services:
     environment:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - REDIS_ENDPOINT_ip= <give the instanc ip>
     depends_on:
       - redis
 

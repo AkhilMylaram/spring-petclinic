@@ -16,6 +16,7 @@ services:
     environment:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - REDIS_ENDPOINT_ip=54.158.121.74
     depends_on:
       - redis
     networks:
