@@ -16,8 +16,7 @@ spec:
     spec:
       containers:
         - name: frontend-container
-          image: client:v1
-          imagePullPolicy: Never
+          image: akhilmylaram/python-redis-chat:frontend
           ports:
             - name: frontend-port
               containerPort: 3000
