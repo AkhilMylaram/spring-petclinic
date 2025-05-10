@@ -1,30 +1,20 @@
-# Stage 1: Build the application using Maven
-FROM maven:latest as build
+# Use the official Python image
+FROM python:3.9-slim
 
-# Set the working directory for the Maven build
+# Set the working directory
 WORKDIR /app
 
-# Copy the Maven project files (pom.xml, etc.)
-COPY pom.xml .
+# Copy the requirements file
+COPY requirements.txt .
 
-# Download the dependencies (this step is cached if pom.xml is not changed)
-RUN mvn dependency:go-offline
+# Install dependencies
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the application code
-COPY src /app/src
+# Copy the application files
+COPY . .
 
-# Build the application using Maven
-RUN mvn clean package -DskipTests
+# Expose the port the app runs on
+EXPOSE 5000
 
-# Stage 2: Create the final image with the built artifact
-FROM eclipse-temurin:17-jdk-alpine
-
-# Set the working directory for the final image
-WORKDIR /app
-
-# Copy the JAR file from the build stage
-COPY --from=build /app/target/*.jar app.jar
-
-# Set the entry point for the application
-ENTRYPOINT ["java", "-jar", "app.jar"]
-
+# Run the application
+CMD ["python", "app.py"]
